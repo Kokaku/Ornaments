@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ornaments annotation</title>
+    <link rel="stylesheet" type="text/css" href="css/imgareaselect-default.css" />
+    <script type="text/javascript" src="scripts/jquery.min.js"></script>
+    <script type="text/javascript" src="scripts/annotatedImageSelector.js"></script>
+</head>
+
+<body>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        startAnnotation();
+    });
+</script>
+
+<div style="height:5vh;">
+    <div id="topL">
+    </div>
+    <div id="topM">
+        <button type="button" onclick="alert('Hello world!')">New random page</button>
+    </div>
+    <div id="topR">
+    </div>
+</div>
+
+<div style="height:90vh;">
+    <div id="bottL">
+        <p>hello</p>
+    </div>
+    <div id="bottM">
+        <!-- TODO For now only the width constrains works. The height adapt in function of width. -->
+        <!--<img id="selectionImg" alt="image couldn't load from dhlabsrv4.epfl.ch" style="width:100%;height:100%;">-->
+
+        <canvas id="annotationCanvas" style="width:100%;">
+            Your browser does not support the HTML5 canvas tag.
+        </canvas>
+    </div>
+    <div id="bottR">
+        <p>hello</p>
+        <canvas id="ornamentsCanvas" style="width:100%;height:1000px;>
+            Your browser does not support the HTML5 canvas tag.
+        </canvas>
+    </div>
+</div>
+
+</body>
+
+</html>
