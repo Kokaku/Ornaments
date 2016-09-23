@@ -6,6 +6,7 @@
     <link rel="stylesheet" type="text/css" href="css/imgareaselect-default.css" />
     <script type="text/javascript" src="scripts/jquery.min.js"></script>
     <script type="text/javascript" src="scripts/annotatedImageSelector.js"></script>
+    <script type="text/javascript" src="scripts/pageHandler.js"></script>
 </head>
 
 <body>
@@ -14,35 +15,33 @@
     $(document).ready(function () {
         startAnnotation();
     });
+    $(window).resize(function() {
+        resizeMainFrame();
+    });
 </script>
 
-<div style="height:5vh;">
-    <div id="topL">
+<div style="height:95vh;">
+    <div id="browser">
+        <div id="page">
+            <canvas id="annotationCanvas" style="width:100%;">
+                Your browser does not support the HTML5 canvas tag.
+            </canvas>
+        </div>
+        <div id="pageSelector">
+            <div id="pagesPreviewTitle" class="previewTitle">
+                <input class="navigationButton" type="image" src="css/first.png" onclick="selectFirstPage();" />
+                <input class="navigationButton" type="image" src="css/prev.png" onclick="selectPreviousPage();" />
+                <input class="navigationButton" type="image" src="css/next.png" onclick="selectNextPage();" />
+                <input class="navigationButton" type="image" src="css/last.png" onclick="selectLastPage();" />
+                <button type="button" onclick="addNewRandomPage();">New random page</button>
+            </div>
+            <div id="pagesPreview" class="preview"></div>
+        </div>
     </div>
-    <div id="topM">
-        <button type="button" onclick="alert('Hello world!')">New random page</button>
-    </div>
-    <div id="topR">
-    </div>
-</div>
-
-<div style="height:90vh;">
-    <div id="bottL">
-        <p>hello</p>
-    </div>
-    <div id="bottM">
-        <!-- TODO For now only the width constrains works. The height adapt in function of width. -->
-        <!--<img id="selectionImg" alt="image couldn't load from dhlabsrv4.epfl.ch" style="width:100%;height:100%;">-->
-
-        <canvas id="annotationCanvas" style="width:100%;">
-            Your browser does not support the HTML5 canvas tag.
-        </canvas>
-    </div>
-    <div id="bottR">
-        <p>hello</p>
-        <canvas id="ornamentsCanvas" style="width:100%;height:1000px;>
-            Your browser does not support the HTML5 canvas tag.
-        </canvas>
+    <div id="ornaments">
+        <div id="ornamentPreviewTitle" class="previewTitle">
+        </div>
+        <div id="ornamentPreview" class="preview"></div>
     </div>
 </div>
 

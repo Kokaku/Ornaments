@@ -1,16 +1,3 @@
-var rectSide = {
-    none: 0,
-    top: 1,
-    bottom: 2,
-    right: 3,
-    left: 4,
-    center: 5,
-    topRight: 6,
-    topLeft: 7,
-    bottomRight: 8,
-    bottomLeft: 9
-};
-
 var cusorsType = {
     none: "initial",
     top: "n-resize",
@@ -24,8 +11,17 @@ var cusorsType = {
     bottomLeft: "sw-resize"
 };
 
+var MAX_PREVIEW_PAGE = 5;
+
 var imageObj = new Image();
+var imagePos = {x: 0, y: 0};
 var rectangles = [];
+var ornamentsPreview = [];
+var pagesPreview = [];
+var loadingQueue = [];
+var selectedPage = 0;
+var loading = true;
+
 var selectedRect = {r: -1, t: "none"};
 var lineWidth = 1;
 var selectedRectPos = {x: 0, y: 0};
@@ -70,16 +66,50 @@ function getRectangle(p1, p2) {
     }
 
     return {
-        x: p.x,
-        y: p.y,
+        x: p.x - imagePos.x,
+        y: p.y - imagePos.y,
         w: abs(p1.x - p2.x),
         h: abs(p1.y - p2.y)
     }
 }
 
+function mainFrameToImageCoord(position) {
+    return {
+      x: position.x - imagePos.x,
+      y: position.y - imagePos.y
+    }
+}
+
+function createNewOrnamentsPreview() {
+    var canv = document.createElement('canvas');
+    canv.id = "ornamentsPreview"+ornamentsPreview.length;
+    canv.className = "ornamentsPreview";
+    document.getElementById('ornamentPreview').appendChild(canv);
+    ornamentsPreview.push(canv);
+
+    canv.addEventListener('mousemove', function(evt) {
+        selectedRect = {r: canv.id.substr(canv.id.length - 1), t: "none"};
+        draw();
+    }, false);
+}
+
+function cutOrnamentPreview(rectangleId) {
+    var rect = rectangles[rectangleId];
+    var canv = ornamentsPreview[rectangleId];
+
+    canv.width = rect.w;
+    canv.height = rect.h;
+
+    var ctx = canv.getContext('2d');
+    ctx.clearRect(0, 0, canv.width, canv.height);
+    ctx.drawImage(imageObj, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+    ctx.stroke();
+}
+
 function saveClickPoint(mousePos) {
     switch(selectedRect.t) {
         case "none":
+            createNewOrnamentsPreview();
             selectedRectPos = mousePos;
             selectedRect.r = rectangles.length;
             rectangles.push(getRectangle(selectedRectPos, selectedRectPos));
@@ -87,14 +117,14 @@ function saveClickPoint(mousePos) {
         case "top":
         case "topRight":
             selectedRectPos = {
-                x: rectangles[selectedRect.r].x,
-                y: rectangles[selectedRect.r].y + rectangles[selectedRect.r].h
+                x: rectangles[selectedRect.r].x + imagePos.x,
+                y: rectangles[selectedRect.r].y + imagePos.y + rectangles[selectedRect.r].h
             };
             break;
         case "topLeft":
             selectedRectPos = {
-                x: rectangles[selectedRect.r].x + rectangles[selectedRect.r].w,
-                y: rectangles[selectedRect.r].y + rectangles[selectedRect.r].h
+                x: rectangles[selectedRect.r].x + imagePos.x + rectangles[selectedRect.r].w,
+                y: rectangles[selectedRect.r].y + imagePos.y + rectangles[selectedRect.r].h
             };
             break;
         case "bottom":
@@ -102,16 +132,16 @@ function saveClickPoint(mousePos) {
         case "bottomRight":
         case "center":
             selectedRectPos = {
-                x: rectangles[selectedRect.r].x,
-                y: rectangles[selectedRect.r].y
+                x: rectangles[selectedRect.r].x + imagePos.x,
+                y: rectangles[selectedRect.r].y + imagePos.y
             };
             break;
             break;
         case "left":
         case "bottomLeft":
             selectedRectPos = {
-                x: rectangles[selectedRect.r].x + rectangles[selectedRect.r].w,
-                y: rectangles[selectedRect.r].y
+                x: rectangles[selectedRect.r].x + imagePos.x + rectangles[selectedRect.r].w,
+                y: rectangles[selectedRect.r].y + imagePos.y
             };
             break;
         default:
@@ -125,16 +155,16 @@ function editRectangle(mousePos) {
         case "top":
         case "bottom":
             rectangles[selectedRect.r] = getRectangle(selectedRectPos,
-                {x: rectangles[selectedRect.r].x + rectangles[selectedRect.r].w, y: mousePos.y});
+                {x: rectangles[selectedRect.r].x + imagePos.x + rectangles[selectedRect.r].w, y: mousePos.y});
             break;
         case "right":
         case "left":
             rectangles[selectedRect.r] = getRectangle(selectedRectPos,
-                {x: mousePos.x, y: rectangles[selectedRect.r].y + rectangles[selectedRect.r].h});
+                {x: mousePos.x, y: rectangles[selectedRect.r].y + imagePos.y + rectangles[selectedRect.r].h});
             break;
         case "center":
-            rectangles[selectedRect.r].x = mousePos.x - mouseClickPos.x + selectedRectPos.x;
-            rectangles[selectedRect.r].y = mousePos.y - mouseClickPos.y + selectedRectPos.y;
+            rectangles[selectedRect.r].x = mousePos.x - mouseClickPos.x + selectedRectPos.x - imagePos.x;
+            rectangles[selectedRect.r].y = mousePos.y - mouseClickPos.y + selectedRectPos.y - imagePos.y;
             break;
         default:
             rectangles[selectedRect.r] = getRectangle(selectedRectPos, mousePos);
@@ -142,6 +172,7 @@ function editRectangle(mousePos) {
 }
 
 function setSelectedRectangle(mousePos) {
+    mousePos = mainFrameToImageCoord(mousePos);
     var tolerance = lineWidth * 15;
     var bestSelection = {r: -1, t: "none", v: Infinity};
 
@@ -203,10 +234,8 @@ function setSelectedRectangle(mousePos) {
 function draw() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    context.drawImage(imageObj,
-        canvas.width/2-imageObj.width/2,
-        canvas.height/2-imageObj.height/2,
-        imageObj.width, imageObj.height);
+    imagePos = {x: canvas.width/2-imageObj.width/2, y: canvas.height/2-imageObj.height/2};
+    context.drawImage(imageObj, imagePos.x, imagePos.y, imageObj.width, imageObj.height);
 
     for (i = 0; i < rectangles.length; i++) {
         if(i == selectedRect.r) {
@@ -219,7 +248,7 @@ function draw() {
 
         var rect = rectangles[i];
         context.beginPath();
-        context.rect(rect.x, rect.y, rect.w, rect.h);
+        context.rect(rect.x + imagePos.x, rect.y + imagePos.y, rect.w, rect.h);
         context.stroke();
     }
 }
@@ -228,57 +257,172 @@ function startListeners() {
     var drawingRect = false;
 
     canvas.addEventListener('mousedown', function(evt) {
-        drawingRect = true;
-        mouseClickPos = getMousePos(canvas, evt);
-        saveClickPoint(mouseClickPos);
+        if (!loading) {
+            drawingRect = true;
+            mouseClickPos = getMousePos(canvas, evt);
+            saveClickPoint(mouseClickPos);
+        }
     }, false);
 
     canvas.addEventListener('mousemove', function(evt) {
-        var mousePos = getMousePos(canvas, evt);
-        if (drawingRect) {
-            editRectangle(mousePos);
-        } else {
-            setSelectedRectangle(mousePos);
+        if (!loading) {
+            var mousePos = getMousePos(canvas, evt);
+            if (drawingRect) {
+                editRectangle(mousePos);
+            } else {
+                setSelectedRectangle(mousePos);
+            }
+            draw();
         }
-        draw();
     }, false);
 
     canvas.addEventListener('mouseup', function(evt) {
-        drawingRect = false;
-        editRectangle(getMousePos(canvas, evt));
-        draw();
+        if (!loading) {
+            drawingRect = false;
+            editRectangle(getMousePos(canvas, evt));
+            cutOrnamentPreview(selectedRect.r);
+            draw();
+        }
     }, false);
 }
 
-function nextRandomPage() {
-    imageObj.src = 'http://dhlabsrv4.epfl.ch/iiif_ornaments/bookm-1092401744_005/full/full/0/default.jpg';
-    imageObj.onload = function() {
-        divToImageRatio = {w: imageObj.width/contnerDiv.clientWidth, h: imageObj.height/contnerDiv.clientHeight};
-        if (divToImageRatio.w < divToImageRatio.h) {
-            canvas.width = contnerDiv.clientWidth * divToImageRatio.h;
-            canvas.height = imageObj.height;
-        } else {
-            canvas.width = imageObj.width;
-            canvas.height = contnerDiv.clientHeight * divToImageRatio.w;
+function setSelectedPage(pageId) {
+    if (pagesPreview.length > selectedPage) {
+        pagesPreview[selectedPage].canv.className = "pagesPreview";
+    }
+    selectedPage = pageId;
+    pagesPreview[pageId].canv.className = "pagesPreview selectedPagePreview";
+    switchPage(pageId);
+}
+
+function addPagePreview() {
+    var canv = document.createElement('canvas');
+
+    if(pagesPreview.length >= MAX_PREVIEW_PAGE) {
+        if(selectedPage != 0) {
+            selectedPage--;
         }
+        document.getElementById('pagesPreview').removeChild(document.getElementById("pagesPreview0"));
+        pagesPreview.splice(0, 1);
+        for (i=0; i < pagesPreview.length; i++) {
+            pagesPreview[i].canv.id = "pagesPreview"+i;
 
-        divToCanvasRatio = {w: canvas.width/contnerDiv.clientWidth, h: canvas.height/contnerDiv.clientHeight};
+        }
+    }
 
-        console.log( "div: ("+contnerDiv.clientWidth+","+contnerDiv.clientHeight+")" );
-        console.log( "img: ("+imageObj.width+","+imageObj.height+")" );
-        console.log( "canv: ("+canvas.width+","+canvas.height+")" );
+    canv.id = "pagesPreview"+pagesPreview.length;
+    document.getElementById('pagesPreview').appendChild(canv);
+    pagesPreview.push({canv: canv, src: imageObj.src});
+    setSelectedPage(pagesPreview.length - 1);
 
-        lineWidth = max(round(max(canvas.width, canvas.height)*0.001), 1);
+    canv.width = imageObj.width;
+    canv.height = imageObj.height;
 
-        draw();
-        startListeners();
+    var ctx = canv.getContext('2d');
+    ctx.drawImage(imageObj, 0, 0, imageObj.width, imageObj.height);
+
+    canv.addEventListener('mouseup', function(evt) {
+        var pageId = parseInt(canv.id.substr(canv.id.length - 1));
+        setSelectedPage(pageId);
+    }, false);
+}
+
+function loadOrnaments() {
+    var ornamentPreviewDiv = document.getElementById("ornamentPreview");
+    while (ornamentPreviewDiv.firstChild) {
+        ornamentPreviewDiv.removeChild(ornamentPreviewDiv.firstChild);
+    }
+    rectangles = [];
+    ornamentsPreview = [];
+    draw();
+}
+
+function resizeMainFrame() {
+    divToImageRatio = {w: imageObj.width / contnerDiv.clientWidth, h: imageObj.height / contnerDiv.clientHeight};
+    if (divToImageRatio.w < divToImageRatio.h) {
+        canvas.width = contnerDiv.clientWidth * divToImageRatio.h;
+        canvas.height = imageObj.height;
+    } else {
+        canvas.width = imageObj.width;
+        canvas.height = contnerDiv.clientHeight * divToImageRatio.w;
+    }
+
+    divToCanvasRatio = {w: canvas.width / contnerDiv.clientWidth, h: canvas.height / contnerDiv.clientHeight};
+    lineWidth = max(round(max(canvas.width, canvas.height) * 0.001), 1);
+    draw();
+}
+
+function selectFirstPage() {
+    console.log("Select first page not implemented yet.");
+}
+
+function selectLastPage() {
+    console.log("Select last page not implemented yet.");
+}
+
+function selectNextPage() {
+    if (selectedPage < MAX_PREVIEW_PAGE - 1) {
+        setSelectedPage(selectedPage+1);
+    } else {
+        //TODO
+        console.log("ok next");
+    }
+}
+
+function selectPreviousPage() {
+    if (selectedPage > 0) {
+        setSelectedPage(selectedPage-1);
+    } else {
+        //TODO
+        console.log("ok previous");
+    }
+}
+
+function loadNextPage() {
+    if( loadingQueue.length != 0 ) {
+        var page = loadingQueue.shift();
+        addPage(pageToURL(page));
+    }
+}
+
+function switchPage(pageId) {
+    imageObj.src = pagesPreview[pageId].src;
+    imageObj.onload = function() {
+        resizeMainFrame();
+        loadOrnaments();
     };
+}
+
+function addPage(pageURL) {
+    imageObj.src = pageURL;
+    imageObj.onload = function() {
+        addPagePreview();
+        resizeMainFrame();
+        loadNextPage();
+    };
+}
+
+function loadPages() {
+    loading = true;
+    loadingQueue = pages.slice(0);
+    loadNextPage();
+    loading = false;
+}
+
+function addNewRandomPage() {
+    loadingQueue.push(getNewRandomPage());
+    if( !loading ) {
+        loading = true;
+        loadNextPage();
+    }
+    loading = false;
 }
 
 function startAnnotation() {
     canvas = document.getElementById('annotationCanvas');
-    contnerDiv = document.getElementById('bottM');
+    contnerDiv = document.getElementById('page');
     context = canvas.getContext('2d');
 
-    nextRandomPage();
+    startListeners();
+    loadPages();
 }
