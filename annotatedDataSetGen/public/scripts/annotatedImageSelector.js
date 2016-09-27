@@ -14,13 +14,14 @@ var cusorsType = {
 var MAX_PREVIEW_PAGE = 5;
 
 var imageObj = new Image();
-var imagePos = {x: 0, y: 0};
-var rectangles = [];
+var currentImagePosition = {x: 0, y: 0};
+var pages = [];
 var ornamentsPreview = [];
 var pagesPreview = [];
 var loadingQueue = [];
 var selectedPage = 0;
 var loading = true;
+
 
 var selectedRect = {r: -1, t: "none"};
 var lineWidth = 1;
@@ -66,8 +67,8 @@ function getRectangle(p1, p2) {
     }
 
     return {
-        x: p.x - imagePos.x,
-        y: p.y - imagePos.y,
+        x: p.x - currentImagePosition.x,
+        y: p.y - currentImagePosition.y,
         w: abs(p1.x - p2.x),
         h: abs(p1.y - p2.y)
     }
@@ -75,8 +76,8 @@ function getRectangle(p1, p2) {
 
 function mainFrameToImageCoord(position) {
     return {
-      x: position.x - imagePos.x,
-      y: position.y - imagePos.y
+      x: position.x - currentImagePosition.x,
+      y: position.y - currentImagePosition.y
     }
 }
 
@@ -94,7 +95,7 @@ function createNewOrnamentsPreview() {
 }
 
 function cutOrnamentPreview(rectangleId) {
-    var rect = rectangles[rectangleId];
+    var rect = pages[selectedPage].rectangles[rectangleId];
     var canv = ornamentsPreview[rectangleId];
 
     canv.width = rect.w;
@@ -107,6 +108,7 @@ function cutOrnamentPreview(rectangleId) {
 }
 
 function saveClickPoint(mousePos) {
+    var rectangles = pages[selectedPage].rectangles;
     switch(selectedRect.t) {
         case "none":
             createNewOrnamentsPreview();
@@ -117,14 +119,14 @@ function saveClickPoint(mousePos) {
         case "top":
         case "topRight":
             selectedRectPos = {
-                x: rectangles[selectedRect.r].x + imagePos.x,
-                y: rectangles[selectedRect.r].y + imagePos.y + rectangles[selectedRect.r].h
+                x: rectangles[selectedRect.r].x + currentImagePosition.x,
+                y: rectangles[selectedRect.r].y + currentImagePosition.y + rectangles[selectedRect.r].h
             };
             break;
         case "topLeft":
             selectedRectPos = {
-                x: rectangles[selectedRect.r].x + imagePos.x + rectangles[selectedRect.r].w,
-                y: rectangles[selectedRect.r].y + imagePos.y + rectangles[selectedRect.r].h
+                x: rectangles[selectedRect.r].x + currentImagePosition.x + rectangles[selectedRect.r].w,
+                y: rectangles[selectedRect.r].y + currentImagePosition.y + rectangles[selectedRect.r].h
             };
             break;
         case "bottom":
@@ -132,16 +134,16 @@ function saveClickPoint(mousePos) {
         case "bottomRight":
         case "center":
             selectedRectPos = {
-                x: rectangles[selectedRect.r].x + imagePos.x,
-                y: rectangles[selectedRect.r].y + imagePos.y
+                x: rectangles[selectedRect.r].x + currentImagePosition.x,
+                y: rectangles[selectedRect.r].y + currentImagePosition.y
             };
             break;
             break;
         case "left":
         case "bottomLeft":
             selectedRectPos = {
-                x: rectangles[selectedRect.r].x + imagePos.x + rectangles[selectedRect.r].w,
-                y: rectangles[selectedRect.r].y + imagePos.y
+                x: rectangles[selectedRect.r].x + currentImagePosition.x + rectangles[selectedRect.r].w,
+                y: rectangles[selectedRect.r].y + currentImagePosition.y
             };
             break;
         default:
@@ -151,20 +153,21 @@ function saveClickPoint(mousePos) {
 }
 
 function editRectangle(mousePos) {
+    var rectangles = pages[selectedPage].rectangles;
     switch(selectedRect.t) {
         case "top":
         case "bottom":
             rectangles[selectedRect.r] = getRectangle(selectedRectPos,
-                {x: rectangles[selectedRect.r].x + imagePos.x + rectangles[selectedRect.r].w, y: mousePos.y});
+                {x: rectangles[selectedRect.r].x + currentImagePosition.x + rectangles[selectedRect.r].w, y: mousePos.y});
             break;
         case "right":
         case "left":
             rectangles[selectedRect.r] = getRectangle(selectedRectPos,
-                {x: mousePos.x, y: rectangles[selectedRect.r].y + imagePos.y + rectangles[selectedRect.r].h});
+                {x: mousePos.x, y: rectangles[selectedRect.r].y + currentImagePosition.y + rectangles[selectedRect.r].h});
             break;
         case "center":
-            rectangles[selectedRect.r].x = mousePos.x - mouseClickPos.x + selectedRectPos.x - imagePos.x;
-            rectangles[selectedRect.r].y = mousePos.y - mouseClickPos.y + selectedRectPos.y - imagePos.y;
+            rectangles[selectedRect.r].x = mousePos.x - mouseClickPos.x + selectedRectPos.x - currentImagePosition.x;
+            rectangles[selectedRect.r].y = mousePos.y - mouseClickPos.y + selectedRectPos.y - currentImagePosition.y;
             break;
         default:
             rectangles[selectedRect.r] = getRectangle(selectedRectPos, mousePos);
@@ -176,8 +179,8 @@ function setSelectedRectangle(mousePos) {
     var tolerance = lineWidth * 15;
     var bestSelection = {r: -1, t: "none", v: Infinity};
 
-    for (i = 0; i < rectangles.length; i++) {
-        var rect = rectangles[i];
+    for (i = 0; i < pages[selectedPage].rectangles.length; i++) {
+        var rect = pages[selectedPage].rectangles[i];
         var selectionArea = {
             top: abs(rect.y - mousePos.y),
             bottom: abs(rect.y + rect.h - mousePos.y),
@@ -234,10 +237,10 @@ function setSelectedRectangle(mousePos) {
 function draw() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    imagePos = {x: canvas.width/2-imageObj.width/2, y: canvas.height/2-imageObj.height/2};
-    context.drawImage(imageObj, imagePos.x, imagePos.y, imageObj.width, imageObj.height);
+    currentImagePosition = {x: canvas.width/2-imageObj.width/2, y: canvas.height/2-imageObj.height/2};
+    context.drawImage(imageObj, currentImagePosition.x, currentImagePosition.y, imageObj.width, imageObj.height);
 
-    for (i = 0; i < rectangles.length; i++) {
+    for (i = 0; i < pages[selectedPage].rectangles.length; i++) {
         if(i == selectedRect.r) {
             context.strokeStyle="blue";
             context.lineWidth = lineWidth*2;
@@ -246,9 +249,9 @@ function draw() {
             context.lineWidth = lineWidth;
         }
 
-        var rect = rectangles[i];
+        var rect = pages[selectedPage].rectangles[i];
         context.beginPath();
-        context.rect(rect.x + imagePos.x, rect.y + imagePos.y, rect.w, rect.h);
+        context.rect(rect.x + currentImagePosition.x, rect.y + currentImagePosition.y, rect.w, rect.h);
         context.stroke();
     }
 }
@@ -282,6 +285,7 @@ function startListeners() {
             editRectangle(getMousePos(canvas, evt));
             cutOrnamentPreview(selectedRect.r);
             draw();
+            var rectangles = pages[selectedPage].rectangles;
             if(rectangles[selectedRect.r].w != 0 || rectangles[selectedRect.r].h !== 0) {
                 postNewOrnament(rectangles[selectedRect.r], function(){});
             }
@@ -335,8 +339,12 @@ function loadOrnaments() {
     while (ornamentPreviewDiv.firstChild) {
         ornamentPreviewDiv.removeChild(ornamentPreviewDiv.firstChild);
     }
-    rectangles = [];
     ornamentsPreview = [];
+    var rectangles = pages[selectedPage].rectangles;
+    for (i=0; i<rectangles.length; i++) {
+        createNewOrnamentsPreview();
+        cutOrnamentPreview(i);
+    }
     draw();
 }
 
@@ -396,8 +404,9 @@ function switchPage(pageId) {
     };
 }
 
-function addPage(pageURL) {
-    imageObj.src = pageURL;
+function addPage(page) {
+    imageObj.src = page.url;
+    pages.push(page);
     imageObj.onload = function() {
         addPagePreview();
         resizeMainFrame();
@@ -408,10 +417,12 @@ function addPage(pageURL) {
 function loadPages() {
     loading = true;
     queryDB("/annotatedPages", function(result) {
-        console.log(result);
         var json = JSON.parse("{ \"res\": "+result+"}");
-        for (i=0; i<json["res"].length; i++) {
-            loadingQueue.push(json["res"][i]["_id"]);
+        for (j=0; j<json["res"].length; j++) {
+            loadingQueue.push({
+                url: json["res"][j]["_id"],
+                rectangles: parseOrnaments(json["res"][j]["ornaments"])
+            });
         }
         loadNextPage();
         loading = false;
@@ -423,7 +434,7 @@ function addNewRandomPage() {
 }
 
 function addNewPage(url) {
-    loadingQueue.push(url);
+    loadingQueue.push({url: url, rectangles: []});
     if( !loading ) {
         loading = true;
         loadNextPage();
@@ -470,4 +481,17 @@ function postNewOrnament(rectangle, callback) {
         }
     };
     http.send("page="+imageObj.src+"&x="+rectangle.x+"&y="+rectangle.y+"&w="+rectangle.w+"&h="+rectangle.h);
+}
+
+function parseOrnaments(strOrnaments) {
+    var ornaments = [];
+    for (i=0; i<strOrnaments.length; i++) {
+        ornaments.push({
+            x: parseFloat(strOrnaments[i].x),
+            y: parseFloat(strOrnaments[i].y),
+            w: parseFloat(strOrnaments[i].w),
+            h: parseFloat(strOrnaments[i].h)
+        });
+    }
+    return ornaments;
 }

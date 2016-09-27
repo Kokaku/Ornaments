@@ -63,7 +63,6 @@ function getAnnotatedPages(httpRes) {
                 if (err) {
                     console.log("Cannot load annotated pages:", err);
                 } else if (result.length) {
-                    console.log('Found:', result);
                     httpRes.send(result)
                 } else {
                     httpRes.send("")
@@ -112,16 +111,25 @@ function getRandomPageInBook(httpRes, db, bookId, booksCount) {
 
         if (err) {
             console.log("Cannot get random page:", err);
+            httpRes.send("");
             db.close();
         } else if (result.length) {
             var pageUrl = result[randomInt(result.length)]["pages"]["url"];
-            /*
-            if (pageUrl already draw) {
-                getRandomBook(httpRes, books, booksCount);
-            }
-             //*/
-            httpRes.send(pageUrl);
-            savePage(db, pageUrl);
+
+            db.collection('annotatedPages').find({_id: pageUrl}).count(function (err, pageCount) {
+                if (err) {
+                    console.log("Cannot fetch annotatedPages:", err);
+                    httpRes.send("");
+                    db.close();
+                } else if (pageCount != 0) {
+                    console.log("redraw: " + pageUrl);
+                    getRandomBook(httpRes, db, booksCount);
+                } else {
+                    console.log("send: " + pageUrl);
+                    httpRes.send(pageUrl);
+                    savePage(db, pageUrl);
+                }
+            });
         } else {
             db.close();
         }
