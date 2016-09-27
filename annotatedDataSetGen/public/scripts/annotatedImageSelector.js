@@ -300,6 +300,12 @@ function startListeners() {
 }
 
 function setSelectedPage(pageId) {
+    if (pageId < 0) {
+        pageId = 0;
+    } else if (pageId > pagesPreview.length) {
+        pageId = pagesPreview.length - 1;
+    }
+
     if (pagesPreview.length > selectedPage) {
         pagesPreview[selectedPage].canv.className = "pagesPreview";
     }
@@ -308,9 +314,18 @@ function setSelectedPage(pageId) {
     switchPage(pageId);
 }
 
-function addPagePreview(side) {
+function removeAllPages() {
+    for(var i=0; i<pagesPreview.length; i++) {
+        document.getElementById('pagesPreview'+i).remove();
+    }
+    pagesPreview = [];
+    pages = [];
+}
+
+function addPagePreview(side, selectPreview, newImageObj) {
     var canv = document.createElement('canvas');
     var pagePreviewDiv = document.getElementById('pagesPreview');
+    var newPreviewId = 0;
 
     if (side == browserPushSide.RIGHT) {
         if(pagesPreview.length >= MAX_PREVIEW_PAGE) {
@@ -327,8 +342,8 @@ function addPagePreview(side) {
 
         canv.id = "pagesPreview"+pagesPreview.length;
         pagePreviewDiv.appendChild(canv);
-        pagesPreview.push({canv: canv, src: imageObj.src});
-        setSelectedPage(pagesPreview.length - 1);
+        pagesPreview.push({canv: canv, src: newImageObj.src});
+        newPreviewId = MAX_PREVIEW_PAGE - 1;
     } else {
         if(pagesPreview.length >= MAX_PREVIEW_PAGE) {
             var lastPreviewId = MAX_PREVIEW_PAGE - 1;
@@ -342,19 +357,22 @@ function addPagePreview(side) {
 
             }
         }
-
         canv.id = "pagesPreview0";
         pagePreviewDiv.insertBefore(canv, pagePreviewDiv.firstChild);
-        pagesPreview.unshift({canv: canv, src: imageObj.src});
-        setSelectedPage(0);
+        pagesPreview.unshift({canv: canv, src: newImageObj.src});
     }
 
 
-    canv.width = imageObj.width;
-    canv.height = imageObj.height;
+    if (selectPreview) {
+        setSelectedPage(newPreviewId);
+    } else {
+        canv.className = "pagesPreview";
+    }
+    canv.width = newImageObj.width;
+    canv.height = newImageObj.height;
 
     var ctx = canv.getContext('2d');
-    ctx.drawImage(imageObj, 0, 0, imageObj.width, imageObj.height);
+    ctx.drawImage(newImageObj, 0, 0, newImageObj.width, newImageObj.height);
 
     canv.addEventListener('mouseup', function(evt) {
         var pageId = parseInt(canv.id.substr(canv.id.length - 1));
@@ -392,18 +410,20 @@ function resizeMainFrame() {
 }
 
 function selectFirstPage() {
-    loadPages(0, MAX_PREVIEW_PAGE, browserPushSide.RIGHT);
+    removeAllPages();
+    loadPages(0, MAX_PREVIEW_PAGE, browserPushSide.RIGHT, 0);
 }
 
 function selectLastPage() {
-    loadPages(Infinity, MAX_PREVIEW_PAGE, browserPushSide.RIGHT);
+    removeAllPages();
+    loadPages(Infinity, MAX_PREVIEW_PAGE, browserPushSide.RIGHT, MAX_PREVIEW_PAGE-1);
 }
 
 function selectNextPage() {
     if (selectedPage < MAX_PREVIEW_PAGE - 1) {
         setSelectedPage(selectedPage+1);
     } else {
-        loadPages(pageBrowserPosition+1, 1, browserPushSide.RIGHT);
+        loadPages(pageBrowserPosition+1, 1, browserPushSide.RIGHT, 0);
     }
 }
 
@@ -413,7 +433,7 @@ function selectPreviousPage() {
     } else {
         var browserPosition = pageBrowserPosition-5;
         if (browserPosition >= 0) {
-            loadPages(browserPosition, 1, browserPushSide.LEFT);
+            loadPages(browserPosition, 1, browserPushSide.LEFT, 0);
         }
     }
 }
@@ -434,8 +454,9 @@ function switchPage(pageId) {
 }
 
 function addPage(page) {
-    imageObj.src = page.url;
-    imageObj.onload = function() {
+    var newImageObj = new Image();
+    newImageObj.src = page.url;
+    newImageObj.onload = function() {
         if (page.side == browserPushSide.RIGHT) {
             if (pages.length >= MAX_PREVIEW_PAGE) {
                 pages.shift();
@@ -449,13 +470,16 @@ function addPage(page) {
             pages.unshift(page);
         }
 
-        addPagePreview(page.side);
-        resizeMainFrame();
+        addPagePreview(page.side, page.show, newImageObj);
+        if (page.show) {
+            imageObj = newImageObj;
+            resizeMainFrame();
+        }
         loadNextPage();
     };
 }
 
-function loadPages(browserPosition, limit, pushSide) {
+function loadPages(browserPosition, limit, pushSide, pageToShow) {
     loading = true;
     var params = "position="+browserPosition+"&limit="+limit;
     queryDB("/annotatedPages", params, function(result) {
@@ -468,6 +492,7 @@ function loadPages(browserPosition, limit, pushSide) {
             }
             for (j = 0; j < json["res"].length; j++) {
                 loadingQueue.push({
+                    show: j == pageToShow,
                     side: pushSide,
                     url: json["res"][j]["_id"],
                     rectangles: parseOrnaments(json["res"][j]["ornaments"])
@@ -485,6 +510,7 @@ function addNewRandomPage() {
 
 function addNewPage(url) {
     loadingQueue.push({
+        show: true,
         side: browserPushSide.RIGHT,
         url: url,
         rectangles: []});
@@ -500,6 +526,7 @@ function startAnnotation() {
     contnerDiv = document.getElementById('page');
     context = canvas.getContext('2d');
 
+    //TODO Start after 1st image loaded
     startListeners();
     selectLastPage();
 }
