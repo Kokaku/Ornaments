@@ -11,6 +11,11 @@ var cusorsType = {
     bottomLeft: "sw-resize"
 };
 
+var browserPushSide = {
+    RIGHT: "right",
+    LEFT: "left"
+};
+
 var MAX_PREVIEW_PAGE = 5;
 
 var imageObj = new Image();
@@ -21,6 +26,7 @@ var pagesPreview = [];
 var loadingQueue = [];
 var selectedPage = 0;
 var loading = true;
+var pageBrowserPosition = Infinity;
 
 
 var selectedRect = {r: -1, t: "none"};
@@ -302,25 +308,47 @@ function setSelectedPage(pageId) {
     switchPage(pageId);
 }
 
-function addPagePreview() {
+function addPagePreview(side) {
     var canv = document.createElement('canvas');
+    var pagePreviewDiv = document.getElementById('pagesPreview');
 
-    if(pagesPreview.length >= MAX_PREVIEW_PAGE) {
-        if(selectedPage != 0) {
-            selectedPage--;
-        }
-        document.getElementById('pagesPreview').removeChild(document.getElementById("pagesPreview0"));
-        pagesPreview.splice(0, 1);
-        for (i=0; i < pagesPreview.length; i++) {
-            pagesPreview[i].canv.id = "pagesPreview"+i;
+    if (side == browserPushSide.RIGHT) {
+        if(pagesPreview.length >= MAX_PREVIEW_PAGE) {
+            if(selectedPage != 0) {
+                selectedPage--;
+            }
+            pagePreviewDiv.removeChild(document.getElementById("pagesPreview0"));
+            pagesPreview.shift();
+            for (i=0; i < pagesPreview.length; i++) {
+                pagesPreview[i].canv.id = "pagesPreview"+i;
 
+            }
         }
+
+        canv.id = "pagesPreview"+pagesPreview.length;
+        pagePreviewDiv.appendChild(canv);
+        pagesPreview.push({canv: canv, src: imageObj.src});
+        setSelectedPage(pagesPreview.length - 1);
+    } else {
+        if(pagesPreview.length >= MAX_PREVIEW_PAGE) {
+            var lastPreviewId = MAX_PREVIEW_PAGE - 1;
+            if (selectedPage != lastPreviewId) {
+                selectedPage++;
+            }
+            pagePreviewDiv.removeChild(document.getElementById("pagesPreview" + lastPreviewId));
+            pagesPreview.pop();
+            for (i = 0; i < pagesPreview.length; i++) {
+                pagesPreview[i].canv.id = "pagesPreview" + (i + 1);
+
+            }
+        }
+
+        canv.id = "pagesPreview0";
+        pagePreviewDiv.insertBefore(canv, pagePreviewDiv.firstChild);
+        pagesPreview.unshift({canv: canv, src: imageObj.src});
+        setSelectedPage(0);
     }
 
-    canv.id = "pagesPreview"+pagesPreview.length;
-    document.getElementById('pagesPreview').appendChild(canv);
-    pagesPreview.push({canv: canv, src: imageObj.src});
-    setSelectedPage(pagesPreview.length - 1);
 
     canv.width = imageObj.width;
     canv.height = imageObj.height;
@@ -364,19 +392,18 @@ function resizeMainFrame() {
 }
 
 function selectFirstPage() {
-    console.log("Select first page not implemented yet.");
+    loadPages(0, MAX_PREVIEW_PAGE, browserPushSide.RIGHT);
 }
 
 function selectLastPage() {
-    console.log("Select last page not implemented yet.");
+    loadPages(Infinity, MAX_PREVIEW_PAGE, browserPushSide.RIGHT);
 }
 
 function selectNextPage() {
     if (selectedPage < MAX_PREVIEW_PAGE - 1) {
         setSelectedPage(selectedPage+1);
     } else {
-        //TODO
-        console.log("ok next");
+        loadPages(pageBrowserPosition+1, 1, browserPushSide.RIGHT);
     }
 }
 
@@ -384,8 +411,10 @@ function selectPreviousPage() {
     if (selectedPage > 0) {
         setSelectedPage(selectedPage-1);
     } else {
-        //TODO
-        console.log("ok previous");
+        var browserPosition = pageBrowserPosition-5;
+        if (browserPosition >= 0) {
+            loadPages(browserPosition, 1, browserPushSide.LEFT);
+        }
     }
 }
 
@@ -406,25 +435,46 @@ function switchPage(pageId) {
 
 function addPage(page) {
     imageObj.src = page.url;
-    pages.push(page);
     imageObj.onload = function() {
-        addPagePreview();
+        if (page.side == browserPushSide.RIGHT) {
+            if (pages.length >= MAX_PREVIEW_PAGE) {
+                pages.shift();
+            }
+            pages.push(page);
+
+        } else {
+            if (pages.length >= MAX_PREVIEW_PAGE) {
+                pages.pop();
+            }
+            pages.unshift(page);
+        }
+
+        addPagePreview(page.side);
         resizeMainFrame();
         loadNextPage();
     };
 }
 
-function loadPages() {
+function loadPages(browserPosition, limit, pushSide) {
     loading = true;
-    queryDB("/annotatedPages", function(result) {
-        var json = JSON.parse("{ \"res\": "+result+"}");
-        for (j=0; j<json["res"].length; j++) {
-            loadingQueue.push({
-                url: json["res"][j]["_id"],
-                rectangles: parseOrnaments(json["res"][j]["ornaments"])
-            });
+    var params = "position="+browserPosition+"&limit="+limit;
+    queryDB("/annotatedPages", params, function(result) {
+        if (result.length > 0) {
+            var json = JSON.parse(result);
+            if (pushSide == browserPushSide.RIGHT) {
+                pageBrowserPosition = json.position;
+            } else {
+                pageBrowserPosition = json.position + MAX_PREVIEW_PAGE - json["res"].length;
+            }
+            for (j = 0; j < json["res"].length; j++) {
+                loadingQueue.push({
+                    side: pushSide,
+                    url: json["res"][j]["_id"],
+                    rectangles: parseOrnaments(json["res"][j]["ornaments"])
+                });
+            }
+            loadNextPage();
         }
-        loadNextPage();
         loading = false;
     });
 }
@@ -434,7 +484,10 @@ function addNewRandomPage() {
 }
 
 function addNewPage(url) {
-    loadingQueue.push({url: url, rectangles: []});
+    loadingQueue.push({
+        side: browserPushSide.RIGHT,
+        url: url,
+        rectangles: []});
     if( !loading ) {
         loading = true;
         loadNextPage();
@@ -448,16 +501,20 @@ function startAnnotation() {
     context = canvas.getContext('2d');
 
     startListeners();
-    loadPages();
+    selectLastPage();
 }
 
 function getNewRandomPage(callback) {
-    queryDB("/nextRandomPage", callback);
+    queryDB("/nextRandomPage", "", callback);
 }
 
-function queryDB(query, callback) {
+function queryDB(query, param, callback) {
     var http = new XMLHttpRequest();
-    http.open("GET", query, true);
+    if(param.length == 0) {
+        http.open("GET", query, true);
+    } else {
+        http.open("POST", query, true);
+    }
 
     http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 
@@ -466,21 +523,12 @@ function queryDB(query, callback) {
             callback(http.responseText);
         }
     };
-    http.send("");
+    http.send(param);
 }
 
 function postNewOrnament(rectangle, callback) {
-    var http = new XMLHttpRequest();
-    http.open("POST", "/newOrnament", true);
-
-    http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-
-    http.onreadystatechange = function() {
-        if(http.readyState == 4 && http.status == 200) {
-            callback(http.responseText);
-        }
-    };
-    http.send("page="+imageObj.src+"&x="+rectangle.x+"&y="+rectangle.y+"&w="+rectangle.w+"&h="+rectangle.h);
+    var params = "page="+imageObj.src+"&x="+rectangle.x+"&y="+rectangle.y+"&w="+rectangle.w+"&h="+rectangle.h;
+    queryDB("/newOrnament", params, callback);
 }
 
 function parseOrnaments(strOrnaments) {

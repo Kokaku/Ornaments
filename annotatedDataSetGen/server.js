@@ -1,9 +1,10 @@
 var mongodb = require('mongodb');
-var MongoClient = mongodb.MongoClient;
-var url = 'mongodb://localhost:27017/ornaments';
 const express = require('express');
 const bodyParser= require('body-parser');
+
 const app = express();
+var MongoClient = mongodb.MongoClient;
+var url = 'mongodb://localhost:27017/ornaments';
 
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -17,8 +18,15 @@ app.get('/', function(req, res) {
     res.sendFile(__dirname + '/index.html');
 });
 
-app.get('/annotatedPages', function(req, res) {
-    getAnnotatedPages(res);
+app.post('/annotatedPages', function(req, res) {
+    var position;
+    if(req.body.position == 'Infinity') {
+        position = Infinity;
+    } else {
+        position = parseInt(req.body.position);
+    }
+    var limit = parseInt(req.body.limit);
+    getAnnotatedPages(res, position, limit);
 });
 
 app.get('/nextRandomPage', function(req, res) {
@@ -52,23 +60,33 @@ app.post('/newOrnament', function(req, res) {
 
 });
 
-function getAnnotatedPages(httpRes) {
+function getAnnotatedPages(httpRes, position, limit) {
     MongoClient.connect(url, function (err, db) {
         if (err) {
             console.log('Unable to connect to the mongoDB server. Error:', err);
             httpRes.send("");
         } else {
             var annotatedPages = db.collection('annotatedPages');
-            annotatedPages.find().limit(-5).toArray(function (err, result) {
+
+            annotatedPages.count(function (err, annotatedPagesCount) {
                 if (err) {
                     console.log("Cannot load annotated pages:", err);
-                } else if (result.length) {
-                    httpRes.send(result)
                 } else {
-                    httpRes.send("")
-                }
+                    if (position == Infinity) {
+                        position = annotatedPagesCount-limit;
+                    }
+                    annotatedPages.find().skip(position).limit(-limit).toArray(function (err, result) {
+                        if (err) {
+                            console.log("Cannot load annotated pages:", err);
+                        } else if (result.length) {
+                            httpRes.send({res: result, position: position+result.length-1})
+                        } else {
+                            httpRes.send("")
+                        }
 
-                db.close();
+                        db.close();
+                    });
+                }
             });
         }
     });
