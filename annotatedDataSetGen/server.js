@@ -79,7 +79,11 @@ function getAnnotatedPages(httpRes, position, limit) {
                         if (err) {
                             console.log("Cannot load annotated pages:", err);
                         } else if (result.length) {
-                            httpRes.send({res: result, position: position+result.length-1})
+                            httpRes.send({
+                                res: result,
+                                position: position+result.length-1,
+                                annotatedPagesCount: annotatedPagesCount
+                            })
                         } else {
                             httpRes.send("")
                         }

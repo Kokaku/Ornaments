@@ -1,5 +1,5 @@
 div > * {
-    vertical-align: top;
+    vertical-align: middle;
 }
 
 button {
@@ -68,6 +68,10 @@ button {
 #pagesPreviewTitle {
     height:3vh;
     margin-bottom: 0.5vh;
+}
+
+#pageBrowserPosition {
+    margin-left: 3%;
 }
 
 .ornamentsPreview {
