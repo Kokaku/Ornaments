@@ -567,14 +567,17 @@ function addNewRandomPage() {
     } else {
         loading = true;
          queryDB("/nextRandomPage", "", function (url) {
-         loadingQueue.push({
-         show: true,
-         side: browserPushSide.RIGHT,
-         url: url,
-         rectangles: []});
-         if( !loading ) {
-         loadNextPage(function(){});
-         }
+             pageBrowserPosition++;
+             pageBrowserCount++;
+             loadingQueue.push({
+                 show: true,
+                 side: browserPushSide.RIGHT,
+                 url: url,
+                 rectangles: []
+             });
+             if( !loading ) {
+                loadNextPage(function(){});
+             }
          });
     }
 }
