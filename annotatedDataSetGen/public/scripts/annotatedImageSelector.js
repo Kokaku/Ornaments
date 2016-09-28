@@ -27,6 +27,7 @@ var pagesPreview = [];
 var loadingQueue = [];
 var selectedPage = -1;
 var loading = true;
+// Number of page to skip to obtain last page preview
 var pageBrowserPosition = Infinity;
 var pageBrowserCount = Infinity;
 
@@ -324,9 +325,10 @@ function setSelectedPage(pageId) {
     pagesPreview[pageId].canv.className = "pagesPreview selectedPagePreview";
     switchPage(pageId);
     setBrowserPosition();
+    putSelectedPagesInMiddle();
+}
 
-    //TODO load next and previous page if available
-    //To do so, we need to know the pageCount
+function putSelectedPagesInMiddle() {
     if (!loading && selectedPage != MIDDLE_PREVIEW_ID) {
         var pushSide;
         var browserPosition;
@@ -334,7 +336,9 @@ function setSelectedPage(pageId) {
         var numberPagesToPush = Math.abs(MIDDLE_PREVIEW_ID - selectedPage);
 
         if(selectedPage > MIDDLE_PREVIEW_ID) {
-            numberPagesToPush = min(pageBrowserCount - globalPagePosition - (MAX_PREVIEW_PAGE - selectedPage - 1), numberPagesToPush);
+            numberPagesToPush = min(
+                pageBrowserCount - globalPagePosition - (MAX_PREVIEW_PAGE - selectedPage - 1),
+                numberPagesToPush);
             browserPosition = getPageGlobalPosition(MAX_PREVIEW_PAGE - 1);
             pushSide = browserPushSide.RIGHT;
         } else {
@@ -453,9 +457,10 @@ function selectFirstPage() {
     loadPages(0, MAX_PREVIEW_PAGE, browserPushSide.RIGHT, 0);
 }
 
-function selectLastPage() {
+function selectLastPage(callback) {
+    callback = callback || function(){};
     removeAllPages();
-    loadPages(Infinity, MAX_PREVIEW_PAGE, browserPushSide.LEFT, MAX_PREVIEW_PAGE-1);
+    loadPages(Infinity, MAX_PREVIEW_PAGE, browserPushSide.LEFT, MAX_PREVIEW_PAGE-1, callback);
 }
 
 function selectNextPage() {
@@ -477,11 +482,12 @@ function selectPreviousPage() {
     }
 }
 
-function loadNextPage() {
+function loadNextPage(callbackFinishQueue) {
     if( loadingQueue.length != 0 ) {
         var page = loadingQueue.shift();
-        addPage(page);
+        addPage(page, callbackFinishQueue);
     } else {
+        callbackFinishQueue();
         loading = false;
     }
 }
@@ -494,7 +500,7 @@ function switchPage(pageId) {
     };
 }
 
-function addPage(page) {
+function addPage(page, callbackFinishQueue) {
     var newImageObj = new Image();
     newImageObj.src = page.url;
     newImageObj.onload = function() {
@@ -516,11 +522,12 @@ function addPage(page) {
             imageObj = newImageObj;
             resizeMainFrame();
         }
-        loadNextPage();
+        loadNextPage(callbackFinishQueue);
     };
 }
 
-function loadPages(browserPosition, limit, pushSide, pageToShow) {
+function loadPages(browserPosition, limit, pushSide, pageToShow, callback) {
+    callback = callback || function() {};
     loading = true;
     var params = "position="+browserPosition+"&limit="+limit;
     queryDB("/annotatedPages", params, function(result) {
@@ -549,24 +556,26 @@ function loadPages(browserPosition, limit, pushSide, pageToShow) {
                     pushOnLoadingQueue(j);
                 }
             }
-            loadNextPage();
+            loadNextPage(callback);
         }
     });
 }
 
 function addNewRandomPage() {
-    queryDB("/nextRandomPage", "", addNewPage);
-}
-
-function addNewPage(url) {
-    loadingQueue.push({
-        show: true,
-        side: browserPushSide.RIGHT,
-        url: url,
-        rectangles: []});
-    if( !loading ) {
+    if (pageBrowserCount != pageBrowserPosition + 1) {
+        selectLastPage(addNewRandomPage);
+    } else {
         loading = true;
-        loadNextPage();
+         queryDB("/nextRandomPage", "", function (url) {
+         loadingQueue.push({
+         show: true,
+         side: browserPushSide.RIGHT,
+         url: url,
+         rectangles: []});
+         if( !loading ) {
+         loadNextPage(function(){});
+         }
+         });
     }
 }
 
