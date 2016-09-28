@@ -296,8 +296,15 @@ function startListeners() {
             cutOrnamentPreview(selectedRect.r);
             draw();
             var rectangles = pages[selectedPage].rectangles;
-            if(rectangles[selectedRect.r].w != 0 || rectangles[selectedRect.r].h !== 0) {
-                postNewOrnament(rectangles[selectedRect.r], function(){});
+            if(rectangles[selectedRect.r].w != 0 && rectangles[selectedRect.r].h !== 0) {
+
+                switch(selectedRect.t) {
+                    case "none":
+                        postNewOrnament(rectangles[selectedRect.r], function(){});
+                        break;
+                    default:
+                        postEditedOrnament(rectangles[selectedRect.r], selectedRect.r, function(){});
+                }
             }
         }
     }, false);
@@ -613,6 +620,12 @@ function queryDB(query, param, callback) {
 function postNewOrnament(rectangle, callback) {
     var params = "page="+imageObj.src+"&x="+rectangle.x+"&y="+rectangle.y+"&w="+rectangle.w+"&h="+rectangle.h;
     queryDB("/newOrnament", params, callback);
+}
+
+function postEditedOrnament(rectangle, rectangleId, callback) {
+    var params = "page="+imageObj.src+"&id="+rectangleId+
+        "&x="+rectangle.x+"&y="+rectangle.y+"&w="+rectangle.w+"&h="+rectangle.h;
+    queryDB("/editOrnament", params, callback);
 }
 
 function parseOrnaments(strOrnaments) {

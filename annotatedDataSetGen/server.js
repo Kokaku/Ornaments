@@ -34,9 +34,7 @@ app.get('/nextRandomPage', function(req, res) {
 });
 
 app.post('/newOrnament', function(req, res) {
-    console.log("newOrnament");
-    console.log(req.body);
-
+    res.send("");
     MongoClient.connect(url, function (err, db) {
         if (err) {
             console.log('Unable to connect to the mongoDB server. Error:', err);
@@ -57,7 +55,33 @@ app.post('/newOrnament', function(req, res) {
                 });
         }
     });
+});
 
+
+app.post('/editOrnament', function(req, res) {
+    res.send("");
+    var editedArray = {};
+    editedArray["ornaments."+req.body["id"]] = {
+        "x": req.body["x"],
+        "y": req.body["y"],
+        "w": req.body["w"],
+        "h": req.body["h"]
+    };
+
+    var editQuery = {"$set": editedArray};
+
+    MongoClient.connect(url, function (err, db) {
+        if (err) {
+            console.log('Unable to connect to the mongoDB server. Error:', err);
+        } else {
+            db.collection('annotatedPages').updateOne(
+                {"_id": req.body["page"]},
+                editQuery,
+                function () {
+                    db.close();
+                });
+        }
+    });
 });
 
 function getAnnotatedPages(httpRes, position, limit) {
