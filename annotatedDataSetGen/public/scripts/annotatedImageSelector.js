@@ -546,6 +546,14 @@ function loadPages(browserPosition, limit, pushSide, pageToShow, callback) {
                 pageBrowserPosition = json.position + MAX_PREVIEW_PAGE - json["res"].length;
             }
             pageBrowserCount = json.annotatedPagesCount;
+
+            if (json["res"].length != limit) {
+                if (pageToShow > 0 && pageToShow < limit && pageToShow >= json["res"].length) {
+                    pageToShow = json["res"].length - 1;
+                }
+                limit = json["res"].length;
+            }
+
             function pushOnLoadingQueue(id) {
                 loadingQueue.push({
                     show: id == pageToShow,
@@ -564,15 +572,22 @@ function loadPages(browserPosition, limit, pushSide, pageToShow, callback) {
                 }
             }
             loadNextPage(callback);
+        } else {
+            if(loadingQueue.length == 0 ) {
+                loading = false;
+            }
+            callback();
         }
     });
 }
 
 function addNewRandomPage() {
-    if (pageBrowserCount != pageBrowserPosition + 1) {
+    if (pageBrowserCount != pageBrowserPosition + 1 && pagesPreview.length == MAX_PREVIEW_PAGE) {
+        console.log("load last");
         selectLastPage(addNewRandomPage);
     } else {
         loading = true;
+        console.log("new random");
          queryDB("/nextRandomPage", "", function (url) {
              pageBrowserPosition++;
              pageBrowserCount++;
@@ -582,9 +597,11 @@ function addNewRandomPage() {
                  url: url,
                  rectangles: []
              });
-             if( !loading ) {
-                loadNextPage(function(){});
+             if(pageBrowserCount == Infinity) {
+                 pageBrowserCount = 0;
+                 pageBrowserPosition = 0;
              }
+            loadNextPage(function(){});
          });
     }
 }
