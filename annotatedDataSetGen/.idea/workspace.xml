@@ -36,8 +36,8 @@
       <file leaf-file-name="annotatedImageSelector.js" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/public/scripts/annotatedImageSelector.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="299">
-              <caret line="584" column="94" selection-start-line="584" selection-start-column="94" selection-end-line="584" selection-end-column="94" />
+            <state relative-caret-position="179">
+              <caret line="449" column="39" selection-start-line="449" selection-start-column="39" selection-end-line="449" selection-end-column="39" />
               <folding />
             </state>
           </provider>
@@ -297,12 +297,12 @@
       <workItem from="1474876634632" duration="29188000" />
       <workItem from="1474990455770" duration="440000" />
       <workItem from="1474991009068" duration="11037000" />
-      <workItem from="1475072897398" duration="6079000" />
+      <workItem from="1475072897398" duration="6799000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="94233000" />
+    <option name="totallyTimeSpent" value="94953000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1680" height="1023" extended-state="6" />
@@ -643,8 +643,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/public/scripts/annotatedImageSelector.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="299">
-          <caret line="584" column="94" selection-start-line="584" selection-start-column="94" selection-end-line="584" selection-end-column="94" />
+        <state relative-caret-position="179">
+          <caret line="449" column="39" selection-start-line="449" selection-start-column="39" selection-end-line="449" selection-end-column="39" />
           <folding />
         </state>
       </provider>

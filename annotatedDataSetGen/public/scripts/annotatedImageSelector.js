@@ -248,7 +248,9 @@ function draw() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     currentImagePosition = {x: canvas.width/2-imageObj.width/2, y: canvas.height/2-imageObj.height/2};
-    context.drawImage(imageObj, currentImagePosition.x, currentImagePosition.y, imageObj.width, imageObj.height);
+    if  (imageObj.width >= 5 && imageObj.height >= 5) {
+        context.drawImage(imageObj, currentImagePosition.x, currentImagePosition.y, imageObj.width, imageObj.height);
+    }
 
     for (var i = 0; i < pages[selectedPage].rectangles.length; i++) {
         if(i == selectedRect.r) {
@@ -445,18 +447,20 @@ function loadOrnaments() {
 }
 
 function resizeMainFrame() {
-    divToImageRatio = {w: imageObj.width / contnerDiv.clientWidth, h: imageObj.height / contnerDiv.clientHeight};
-    if (divToImageRatio.w < divToImageRatio.h) {
-        canvas.width = contnerDiv.clientWidth * divToImageRatio.h;
-        canvas.height = imageObj.height;
-    } else {
-        canvas.width = imageObj.width;
-        canvas.height = contnerDiv.clientHeight * divToImageRatio.w;
-    }
+    if (imageObj.width >= 5 && imageObj.height >= 5) {
+        divToImageRatio = {w: imageObj.width / contnerDiv.clientWidth, h: imageObj.height / contnerDiv.clientHeight};
+        if (divToImageRatio.w < divToImageRatio.h) {
+            canvas.width = contnerDiv.clientWidth * divToImageRatio.h;
+            canvas.height = imageObj.height;
+        } else {
+            canvas.width = imageObj.width;
+            canvas.height = contnerDiv.clientHeight * divToImageRatio.w;
+        }
 
-    divToCanvasRatio = {w: canvas.width / contnerDiv.clientWidth, h: canvas.height / contnerDiv.clientHeight};
-    lineWidth = max(round(max(canvas.width, canvas.height) * 0.001), 1);
-    draw();
+        divToCanvasRatio = {w: canvas.width / contnerDiv.clientWidth, h: canvas.height / contnerDiv.clientHeight};
+        lineWidth = max(round(max(canvas.width, canvas.height) * 0.001), 1);
+        draw();
+    }
 }
 
 function selectFirstPage() {
@@ -583,11 +587,9 @@ function loadPages(browserPosition, limit, pushSide, pageToShow, callback) {
 
 function addNewRandomPage() {
     if (pageBrowserCount != pageBrowserPosition + 1 && pagesPreview.length == MAX_PREVIEW_PAGE) {
-        console.log("load last");
         selectLastPage(addNewRandomPage);
     } else {
         loading = true;
-        console.log("new random");
          queryDB("/nextRandomPage", "", function (url) {
              pageBrowserPosition++;
              pageBrowserCount++;
