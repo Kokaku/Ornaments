@@ -98,6 +98,9 @@ function getAnnotatedPages(httpRes, position, limit) {
                 } else {
                     if (position == Infinity) {
                         position = annotatedPagesCount-limit;
+                        if(position < 0 ) {
+                            position = 0;
+                        }
                     }
                     annotatedPages.find().skip(position).limit(-limit).toArray(function (err, result) {
                         if (err) {
