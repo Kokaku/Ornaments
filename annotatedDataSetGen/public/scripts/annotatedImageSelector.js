@@ -463,6 +463,24 @@ function resizeMainFrame() {
     }
 }
 
+function jumpToPage() {
+    var pagePositionInput = document.getElementById("jumpPagePosition");
+    var pageToSkip = parseInt(pagePositionInput.value) - MIDDLE_PREVIEW_ID - 1;
+    var showPosition = MIDDLE_PREVIEW_ID;
+
+
+    if (pageToSkip < 0) {
+        showPosition = pageToSkip+2;
+        pageToSkip = 0;
+    } else if (pageToSkip > pageBrowserCount - MAX_PREVIEW_PAGE) {
+        showPosition = pageToSkip - pageBrowserCount + MAX_PREVIEW_PAGE + MIDDLE_PREVIEW_ID;
+        pageToSkip = pageBrowserCount - MAX_PREVIEW_PAGE;
+    }
+
+    removeAllPages();
+    loadPages(pageToSkip, MAX_PREVIEW_PAGE, browserPushSide.RIGHT, showPosition);
+}
+
 function selectFirstPage() {
     removeAllPages();
     loadPages(0, MAX_PREVIEW_PAGE, browserPushSide.RIGHT, 0);

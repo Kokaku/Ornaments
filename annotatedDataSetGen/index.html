@@ -34,6 +34,8 @@
                 <input class="navigationButton" type="image" src="public/css/last.png" onclick="selectLastPage();" />
                 <span id="pageBrowserPosition">0/0</span>
                 <button type="button" onclick="addNewRandomPage();">New random page</button>
+                <input id="jumpPagePosition" type="text" name="pagePosition" value="1">
+                <button type="button" onclick="jumpToPage();">Jump</button>
             </div>
             <div id="pagesPreview" class="preview"></div>
         </div>
