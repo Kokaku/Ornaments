@@ -131,7 +131,7 @@ function createNewOrnamentsPreview() {
         if (mousePosX > ornamentPreviewDiv.clientWidth*0.9) {
             if (confirm('Are you sure you want to delete this ornament from the database?')) {
                 removeOrnament(selectedRect.r, function(){});
-                jumpToGivenPage(selectedPage+1);
+                jumpToGivenPage(pageBrowserPosition-1);
             }
         } else {
             enableSelectTagOrnament();
