@@ -58,6 +58,33 @@ app.post('/newOrnament', function(req, res) {
 });
 
 
+app.post('/removeOrnament', function(req, res) {
+    res.send("");
+    var editedArray = {};
+    editedArray["ornaments."+req.body["id"]] = 1;
+
+    var editQuery = {"$unset": editedArray};
+
+    MongoClient.connect(url, function (err, db) {
+        if (err) {
+            console.log('Unable to connect to the mongoDB server. Error:', err);
+        } else {
+            db.collection('annotatedPages').updateOne(
+                {"_id": req.body["page"]},
+                editQuery,
+                function () {
+                    db.collection('annotatedPages').updateOne(
+                        {"_id": req.body["page"]},
+                        {$pull: {ornaments: null}},
+                        function () {
+                            db.close();
+                        });
+                });
+        }
+    });
+});
+
+
 app.post('/editOrnament', function(req, res) {
     res.send("");
     var editedArray = {};
@@ -65,7 +92,9 @@ app.post('/editOrnament', function(req, res) {
         "x": req.body["x"],
         "y": req.body["y"],
         "w": req.body["w"],
-        "h": req.body["h"]
+        "h": req.body["h"],
+        "nature": req.body["nature"],
+        "type": req.body["type"]
     };
 
     var editQuery = {"$set": editedArray};

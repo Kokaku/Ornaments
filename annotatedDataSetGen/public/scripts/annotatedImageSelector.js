@@ -20,6 +20,7 @@ var MAX_PREVIEW_PAGE = 5;
 var MIDDLE_PREVIEW_ID = (MAX_PREVIEW_PAGE - 1) / 2;
 
 var imageObj = new Image();
+var deleteImage = new Image();
 var currentImagePosition = {x: 0, y: 0};
 var pages = [];
 var ornamentsPreview = [];
@@ -53,7 +54,7 @@ function getMousePos(canvas, evt) {
     return {
         x: (evt.clientX - rect.left) * divToCanvasRatio.w,
         y: (evt.clientY - rect.top) * divToCanvasRatio.h
-    }
+    };
 }
 
 function isACorner(side) {
@@ -91,6 +92,30 @@ function mainFrameToImageCoord(position) {
     }
 }
 
+function enableSelectTagOrnament() {
+    var ornamentType = document.getElementById("ornamentType");
+    var ornamentNature = document.getElementById("ornamentNature");
+
+    if(selectedRect.r >= 0 && selectedRect.r < pages[selectedPage].rectangles.length) {
+        var rectangle = pages[selectedPage].rectangles[selectedRect.r];
+
+        if(!("nature" in rectangle)) {
+            rectangle.nature = "Unknown";
+        }
+        if(!("type" in rectangle)) {
+            rectangle.type = "Unknown";
+        }
+
+        ornamentType.value = rectangle.type;
+        ornamentNature.value = rectangle.nature;
+        ornamentType.disabled = false;
+        ornamentNature.disabled = false;
+    } else {
+        ornamentType.disabled = true;
+        ornamentNature.disabled = true;
+    }
+}
+
 function createNewOrnamentsPreview() {
     var canv = document.createElement('canvas');
     canv.id = "ornamentsPreview"+ornamentsPreview.length;
@@ -98,9 +123,20 @@ function createNewOrnamentsPreview() {
     document.getElementById('ornamentPreview').appendChild(canv);
     ornamentsPreview.push(canv);
 
-    canv.addEventListener('mousemove', function(evt) {
+    canv.addEventListener('mousedown', function(evt) {
         selectedRect = {r: canv.id.substr(canv.id.length - 1), t: "none"};
-        draw();
+
+        ornamentPreviewDiv = document.getElementById('ornamentPreview');
+        var mousePosX = (evt.clientX - canv.getBoundingClientRect().left);
+        if (mousePosX > ornamentPreviewDiv.clientWidth*0.9) {
+            if (confirm('Are you sure you want to delete this ornament from the database?')) {
+                removeOrnament(selectedRect.r, function(){});
+                jumpToGivenPage(selectedPage+1);
+            }
+        } else {
+            enableSelectTagOrnament();
+            draw();
+        }
     }, false);
 }
 
@@ -114,6 +150,7 @@ function cutOrnamentPreview(rectangleId) {
     var ctx = canv.getContext('2d');
     ctx.clearRect(0, 0, canv.width, canv.height);
     ctx.drawImage(imageObj, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+    ctx.drawImage(deleteImage, 0, 0, deleteImage.width, deleteImage.height, rect.w*0.9, 0, rect.w*0.1, rect.w*0.1);
     ctx.stroke();
 }
 
@@ -124,6 +161,7 @@ function saveClickPoint(mousePos) {
             createNewOrnamentsPreview();
             selectedRectPos = mousePos;
             selectedRect.r = rectangles.length;
+            enableSelectTagOrnament();
             rectangles.push(getRectangle(selectedRectPos, selectedRectPos));
             break;
         case "top":
@@ -241,6 +279,7 @@ function setSelectedRectangle(mousePos) {
     }
 
     selectedRect = {r: bestSelection.r, t: bestSelection.t};
+    enableSelectTagOrnament();
     canvas.style.cursor = cusorsType[selectedRect.t];
 }
 
@@ -465,7 +504,12 @@ function resizeMainFrame() {
 
 function jumpToPage() {
     var pagePositionInput = document.getElementById("jumpPagePosition");
-    var pageToSkip = parseInt(pagePositionInput.value) - MIDDLE_PREVIEW_ID - 1;
+    jumpToGivenPage(parseInt(pagePositionInput.value));
+}
+
+function jumpToGivenPage(pageId) {
+    loading = true;
+    var pageToSkip = pageId - MIDDLE_PREVIEW_ID - 1;
     var showPosition = MIDDLE_PREVIEW_ID;
 
 
@@ -632,6 +676,8 @@ function startAnnotation() {
     contnerDiv = document.getElementById('page');
     context = canvas.getContext('2d');
 
+    deleteImage.src = "public/css/delete.png";
+
     startListeners();
     selectLastPage();
 }
@@ -660,9 +706,29 @@ function postNewOrnament(rectangle, callback) {
 }
 
 function postEditedOrnament(rectangle, rectangleId, callback) {
+    if(!("nature" in rectangle)) {
+        rectangle.nature = "Unknown";
+    }
+    if(!("type" in rectangle)) {
+        rectangle.type = "Unknown";
+    }
+
     var params = "page="+imageObj.src+"&id="+rectangleId+
-        "&x="+rectangle.x+"&y="+rectangle.y+"&w="+rectangle.w+"&h="+rectangle.h;
+        "&x="+rectangle.x+
+        "&y="+rectangle.y+
+        "&w="+rectangle.w+
+        "&h="+rectangle.h+
+        "&nature="+rectangle.nature+
+        "&type="+rectangle.type;
+
     queryDB("/editOrnament", params, callback);
+}
+
+
+function removeOrnament(rectangleId, callback) {
+    var params = "page="+imageObj.src+"&id="+rectangleId;
+
+    queryDB("/removeOrnament", params, callback);
 }
 
 function parseOrnaments(strOrnaments) {
@@ -672,8 +738,26 @@ function parseOrnaments(strOrnaments) {
             x: parseFloat(strOrnaments[i].x),
             y: parseFloat(strOrnaments[i].y),
             w: parseFloat(strOrnaments[i].w),
-            h: parseFloat(strOrnaments[i].h)
+            h: parseFloat(strOrnaments[i].h),
+            type: strOrnaments[i].type,
+            nature: strOrnaments[i].nature
         });
     }
     return ornaments;
+}
+
+function onSelectOrnamentType(select) {
+    var selectedOption = select.options[select.selectedIndex].value;
+    var rectangle = pages[selectedPage].rectangles[selectedRect.r];
+
+    rectangle.type = selectedOption;
+    postEditedOrnament(rectangle, selectedRect.r, function(){});
+}
+
+function onSelectOrnamentNature(select) {
+    var selectedOption = select.options[select.selectedIndex].value;
+    var rectangle = pages[selectedPage].rectangles[selectedRect.r];
+
+    rectangle.nature = selectedOption;
+    postEditedOrnament(rectangle, selectedRect.r, function(){});
 }

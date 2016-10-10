@@ -42,6 +42,21 @@
     </div>
     <div id="ornaments">
         <div id="ornamentPreviewTitle" class="previewTitle">
+            <select id="ornamentNature"onchange="onSelectOrnamentNature (this)">
+                <option value="Unknown">Unknown</option>
+                <option value="Bloc">Bloc</option>
+                <option value="Taille-douce">Taille-douce</option>
+                <option value="Composition">Composition</option>
+                <option value="Mixte">Mixte</option>
+            </select>
+            <select id="ornamentType" onchange="onSelectOrnamentType (this)">
+                <option value="Unknown">Unknown</option>
+                <option value="Fleuron">Fleuron</option>
+                <option value="Bandeau">Bandeau</option>
+                <option value="Lettrine">Lettrine</option>
+                <option value="Encadrement">Encadrement</option>
+                <option value="Pagination">Pagination</option>
+            </select>
         </div>
         <div id="ornamentPreview" class="preview"></div>
     </div>
