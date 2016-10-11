@@ -28,13 +28,14 @@
         </div>
         <div id="pageSelector">
             <div id="pagesPreviewTitle" class="previewTitle">
+                <input id="ornamentsFilter" type="checkbox" name="filter" onclick="enableOrnamentsFilter();">Filter
+                <button id="newRandomPage" type="button" onclick="addNewRandomPage();">New random page</button>
                 <input class="navigationButton" type="image" src="public/css/first.png" onclick="selectFirstPage();" />
                 <input class="navigationButton" type="image" src="public/css/prev.png" onclick="selectPreviousPage();" />
                 <input class="navigationButton" type="image" src="public/css/next.png" onclick="selectNextPage();" />
                 <input class="navigationButton" type="image" src="public/css/last.png" onclick="selectLastPage();" />
                 <span id="pageBrowserPosition">0/0</span>
-                <button type="button" onclick="addNewRandomPage();">New random page</button>
-                <input id="jumpPagePosition" type="text" name="pagePosition" value="1">
+                <input id="jumpPagePosition" type="text" name="pagePosition" value="1" size="6">
                 <button type="button" onclick="jumpToPage();">Jump</button>
             </div>
             <div id="pagesPreview" class="preview"></div>
@@ -54,6 +55,7 @@
                 <option value="Fleuron">Fleuron</option>
                 <option value="Bandeau">Bandeau</option>
                 <option value="Lettrine">Lettrine</option>
+                <option value="Titre lettrines">Titre lettrines</option>
                 <option value="Encadrement">Encadrement</option>
                 <option value="Pagination">Pagination</option>
             </select>

@@ -26,7 +26,7 @@ app.post('/annotatedPages', function(req, res) {
         position = parseInt(req.body.position);
     }
     var limit = parseInt(req.body.limit);
-    getAnnotatedPages(res, position, limit);
+    getAnnotatedPages(res, position, limit, req.body.filter == "true");
 });
 
 app.get('/nextRandomPage', function(req, res) {
@@ -113,15 +113,21 @@ app.post('/editOrnament', function(req, res) {
     });
 });
 
-function getAnnotatedPages(httpRes, position, limit) {
+function getAnnotatedPages(httpRes, position, limit, ornamentsFilter) {
     MongoClient.connect(url, function (err, db) {
         if (err) {
             console.log('Unable to connect to the mongoDB server. Error:', err);
             httpRes.send("");
         } else {
             var annotatedPages = db.collection('annotatedPages');
+            var findFunction;
+            if (ornamentsFilter) {
+                findFunction = annotatedPages.find({ ornaments: { "$exists": "true", "$ne": [] } });
+            } else {
+                findFunction = annotatedPages.find();
+            }
 
-            annotatedPages.count(function (err, annotatedPagesCount) {
+            findFunction.count(function (err, annotatedPagesCount) {
                 if (err) {
                     console.log("Cannot load annotated pages:", err);
                 } else {
@@ -131,7 +137,7 @@ function getAnnotatedPages(httpRes, position, limit) {
                             position = 0;
                         }
                     }
-                    annotatedPages.find().skip(position).limit(-limit).toArray(function (err, result) {
+                    findFunction.skip(position).limit(-limit).toArray(function (err, result) {
                         if (err) {
                             console.log("Cannot load annotated pages:", err);
                         } else if (result.length) {

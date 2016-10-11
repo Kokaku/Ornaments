@@ -31,6 +31,7 @@ var loading = true;
 // Number of page to skip to obtain last page preview
 var pageBrowserPosition = Infinity;
 var pageBrowserCount = Infinity;
+var ornamentsFilter = false;
 
 
 var selectedRect = {r: -1, t: "none"};
@@ -374,6 +375,8 @@ function setSelectedPage(pageId) {
     switchPage(pageId);
     setBrowserPosition();
     putSelectedPagesInMiddle();
+    selectedRect = {r: -1, t: "none"};
+    enableSelectTagOrnament();
 }
 
 function putSelectedPagesInMiddle() {
@@ -525,6 +528,12 @@ function jumpToGivenPage(pageId) {
     loadPages(pageToSkip, MAX_PREVIEW_PAGE, browserPushSide.RIGHT, showPosition);
 }
 
+function enableOrnamentsFilter() {
+    ornamentsFilter = document.getElementById("ornamentsFilter").checked;
+    document.getElementById("newRandomPage").disabled = ornamentsFilter;
+    selectLastPage(function() {});
+}
+
 function selectFirstPage() {
     removeAllPages();
     loadPages(0, MAX_PREVIEW_PAGE, browserPushSide.RIGHT, 0);
@@ -602,7 +611,7 @@ function addPage(page, callbackFinishQueue) {
 function loadPages(browserPosition, limit, pushSide, pageToShow, callback) {
     callback = callback || function() {};
     loading = true;
-    var params = "position="+browserPosition+"&limit="+limit;
+    var params = "position="+browserPosition+"&limit="+limit+"&filter="+ornamentsFilter;
     queryDB("/annotatedPages", params, function(result) {
         if (result.length > 0) {
             var json = JSON.parse(result);
